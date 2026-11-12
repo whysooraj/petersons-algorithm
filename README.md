@@ -71,6 +71,20 @@ Clean build artifacts:
 make clean
 ```
 
+## Interactive Web Simulator
+
+An interactive web simulator is included in `index.html`. It provides:
+- Step-by-step instruction execution for Process 0 and Process 1
+- Real-time shared memory inspection (`flag[0]`, `flag[1]`, `turn`)
+- Critical section occupancy monitoring and mutual exclusion verification
+- Auto-play simulation with configurable speed and state transition logs
+
+Run local server:
+```bash
+make serve
+```
+Or open `index.html` directly in any web browser.
+
 ## Verification
 
 The program creates two concurrent worker threads, each executing 1,000,000 increments on a shared counter. It uses an atomic tracker `in_cs` to assert that never more than 1 thread occupies the critical section, and verifies that the final count equals 2,000,000.

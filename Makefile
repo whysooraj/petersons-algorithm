@@ -13,4 +13,8 @@ run: $(TARGET)
 clean:
 	rm -f $(TARGET)
 
-.PHONY: all run clean
+serve:
+	@echo "Serving at http://localhost:8000"
+	python3 -m http.server 8000
+
+.PHONY: all run clean serve
