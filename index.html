@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Peterson's Algorithm Simulator</title>
+  <title>Peterson's Solution - Operating Systems Simulator</title>
   <style>
     :root {
       --bg: #09090b;
@@ -15,11 +15,15 @@
       --text-dim: #71717a;
       --p0-accent: #38bdf8;
       --p0-bg: rgba(56, 189, 248, 0.08);
+      --p0-border: rgba(56, 189, 248, 0.35);
       --p1-accent: #fbbf24;
       --p1-bg: rgba(251, 191, 36, 0.08);
+      --p1-border: rgba(251, 191, 36, 0.35);
       --cs-accent: #34d399;
       --cs-bg: rgba(52, 211, 153, 0.08);
+      --cs-border: rgba(52, 211, 153, 0.35);
       --danger: #f87171;
+      --danger-bg: rgba(248, 113, 113, 0.12);
     }
 
     * {
@@ -31,17 +35,22 @@
     body {
       background-color: var(--bg);
       color: var(--text);
-      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", sans-serif;
       line-height: 1.5;
       padding: 24px;
-      max-width: 1200px;
+      max-width: 1320px;
       margin: 0 auto;
     }
 
     header {
-      margin-bottom: 24px;
+      margin-bottom: 20px;
       border-bottom: 1px solid var(--card-border);
       padding-bottom: 16px;
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-end;
+      flex-wrap: wrap;
+      gap: 12px;
     }
 
     h1 {
@@ -52,22 +61,47 @@
     }
 
     .subtitle {
-      font-size: 0.875rem;
+      font-size: 0.85rem;
       color: var(--text-muted);
-      margin-top: 4px;
+      margin-top: 3px;
     }
 
-    /* Top Control Bar */
+    .mode-toggle-group {
+      display: flex;
+      background: #18181b;
+      border: 1px solid var(--card-border);
+      border-radius: 6px;
+      padding: 2px;
+    }
+
+    .mode-btn {
+      background: transparent;
+      border: none;
+      color: var(--text-muted);
+      padding: 6px 14px;
+      font-size: 0.8125rem;
+      font-weight: 500;
+      cursor: pointer;
+      border-radius: 4px;
+      transition: background 0.15s, color 0.15s;
+    }
+
+    .mode-btn.active {
+      background: #27272a;
+      color: var(--text);
+    }
+
+    /* Top Controls */
     .controls-panel {
       display: flex;
       flex-wrap: wrap;
-      gap: 12px;
+      gap: 10px;
       align-items: center;
       background: var(--card-bg);
       border: 1px solid var(--card-border);
       border-radius: 8px;
       padding: 12px 16px;
-      margin-bottom: 24px;
+      margin-bottom: 20px;
     }
 
     button {
@@ -101,7 +135,7 @@
     }
 
     button.p0-btn {
-      border-color: rgba(56, 189, 248, 0.4);
+      border-color: var(--p0-border);
       color: var(--p0-accent);
     }
 
@@ -110,7 +144,7 @@
     }
 
     button.p1-btn {
-      border-color: rgba(251, 191, 36, 0.4);
+      border-color: var(--p1-border);
       color: var(--p1-accent);
     }
 
@@ -137,15 +171,31 @@
       cursor: pointer;
     }
 
+    /* Badges */
+    .badge {
+      font-size: 0.6875rem;
+      font-weight: 600;
+      padding: 2px 8px;
+      border-radius: 4px;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+    }
+
+    .badge-remainder { background: #27272a; color: var(--text-muted); }
+    .badge-waiting { background: rgba(251, 191, 36, 0.15); color: #fbbf24; border: 1px solid var(--p1-border); }
+    .badge-blocked { background: rgba(248, 113, 113, 0.15); color: #f87171; border: 1px solid rgba(248, 113, 113, 0.3); }
+    .badge-cs { background: rgba(52, 211, 153, 0.15); color: #34d399; border: 1px solid var(--cs-border); }
+    .badge-exit { background: rgba(56, 189, 248, 0.15); color: #38bdf8; border: 1px solid var(--p0-border); }
+
     /* Main Grid */
     .grid {
       display: grid;
-      grid-template-columns: 1fr 1fr 1fr;
+      grid-template-columns: 1fr 1.15fr 1fr;
       gap: 16px;
-      margin-bottom: 24px;
+      margin-bottom: 20px;
     }
 
-    @media (max-width: 900px) {
+    @media (max-width: 980px) {
       .grid {
         grid-template-columns: 1fr;
       }
@@ -158,7 +208,7 @@
       padding: 16px;
       display: flex;
       flex-direction: column;
-      gap: 14px;
+      gap: 12px;
     }
 
     .card-header {
@@ -170,7 +220,7 @@
     }
 
     .card-title {
-      font-size: 0.875rem;
+      font-size: 0.8125rem;
       font-weight: 600;
       text-transform: uppercase;
       letter-spacing: 0.05em;
@@ -179,20 +229,6 @@
     .p0-title { color: var(--p0-accent); }
     .p1-title { color: var(--p1-accent); }
     .center-title { color: var(--text); }
-
-    .badge {
-      font-size: 0.6875rem;
-      font-weight: 600;
-      padding: 2px 8px;
-      border-radius: 4px;
-      text-transform: uppercase;
-      letter-spacing: 0.04em;
-    }
-
-    .badge-idle { background: #27272a; color: var(--text-muted); }
-    .badge-waiting { background: rgba(251, 191, 36, 0.15); color: #fbbf24; border: 1px solid rgba(251, 191, 36, 0.3); }
-    .badge-blocked { background: rgba(248, 113, 113, 0.15); color: #f87171; border: 1px solid rgba(248, 113, 113, 0.3); }
-    .badge-cs { background: rgba(52, 211, 153, 0.15); color: #34d399; border: 1px solid rgba(52, 211, 153, 0.3); }
 
     /* Code listing representation */
     .code-box {
@@ -205,9 +241,9 @@
     }
 
     .code-line {
-      padding: 6px 10px;
+      padding: 5px 10px;
       display: flex;
-      gap: 12px;
+      gap: 10px;
       border-left: 3px solid transparent;
       color: var(--text-dim);
     }
@@ -228,12 +264,70 @@
       border-left-color: var(--p0-accent);
       background: var(--p0-bg);
       color: #e0f2fe;
+      font-weight: 500;
     }
 
     .code-line.active.p1-active {
       border-left-color: var(--p1-accent);
       background: var(--p1-bg);
       color: #fef3c7;
+      font-weight: 500;
+    }
+
+    /* Explanation Box */
+    .expl-box {
+      background: #0d0d10;
+      border: 1px solid var(--border-subtle);
+      border-radius: 6px;
+      padding: 10px 12px;
+      font-size: 0.75rem;
+      display: flex;
+      flex-direction: column;
+      gap: 5px;
+    }
+
+    .expl-title {
+      font-size: 0.6875rem;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      color: var(--text-dim);
+      font-weight: 600;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .expl-content {
+      color: var(--text);
+      line-height: 1.45;
+    }
+
+    .expl-condition {
+      background: #141418;
+      border-radius: 4px;
+      padding: 6px 8px;
+      margin-top: 2px;
+      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+      font-size: 0.7188rem;
+    }
+
+    .next-action {
+      font-size: 0.7188rem;
+      color: var(--text-muted);
+      border-top: 1px solid var(--border-subtle);
+      padding-top: 5px;
+      margin-top: 2px;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .next-label {
+      color: var(--text-dim);
+      font-weight: 600;
+      text-transform: uppercase;
+      font-size: 0.625rem;
+      letter-spacing: 0.05em;
     }
 
     /* Shared Memory Representation */
@@ -249,10 +343,17 @@
       border-radius: 6px;
       padding: 10px;
       text-align: center;
+      position: relative;
+      transition: border-color 0.2s, background 0.2s;
     }
 
     .mem-cell.span-2 {
       grid-column: span 2;
+    }
+
+    .mem-cell.flash {
+      border-color: #3f3f46;
+      background: #1a1a20;
     }
 
     .mem-label {
@@ -260,7 +361,7 @@
       color: var(--text-dim);
       text-transform: uppercase;
       letter-spacing: 0.05em;
-      margin-bottom: 4px;
+      margin-bottom: 2px;
       font-family: monospace;
     }
 
@@ -271,53 +372,156 @@
       color: var(--text);
     }
 
+    .mem-desc {
+      font-size: 0.6875rem;
+      color: var(--text-muted);
+      margin-top: 2px;
+    }
+
     .val-true { color: #34d399; }
     .val-false { color: var(--text-dim); }
+
+    /* What this means synthesis */
+    .synthesis-card {
+      background: #0d0d0f;
+      border: 1px solid var(--border-subtle);
+      border-radius: 6px;
+      padding: 10px 12px;
+      font-size: 0.75rem;
+    }
+
+    .synthesis-header {
+      font-size: 0.6875rem;
+      color: var(--text-dim);
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      font-weight: 600;
+      margin-bottom: 4px;
+    }
+
+    .synthesis-text {
+      color: var(--text);
+      line-height: 1.45;
+    }
 
     /* Critical Section Chamber */
     .cs-chamber {
       background: #0d0d0f;
       border: 1px dashed #3f3f46;
       border-radius: 6px;
-      padding: 20px 14px;
+      padding: 16px 14px;
       text-align: center;
       transition: background 0.2s, border-color 0.2s;
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+      align-items: center;
     }
 
     .cs-chamber.occupied-p0 {
       border-style: solid;
-      border-color: var(--p0-accent);
+      border-color: var(--p0-border);
       background: var(--p0-bg);
     }
 
     .cs-chamber.occupied-p1 {
       border-style: solid;
-      border-color: var(--p1-accent);
+      border-color: var(--p1-border);
       background: var(--p1-bg);
     }
 
     .cs-chamber.violation {
       border-style: solid;
       border-color: var(--danger);
-      background: rgba(248, 113, 113, 0.15);
+      background: var(--danger-bg);
     }
 
     .cs-status {
-      font-size: 0.8125rem;
-      font-weight: 600;
+      font-size: 0.875rem;
+      font-weight: 700;
       letter-spacing: 0.05em;
       text-transform: uppercase;
+    }
+
+    .cs-sub {
+      font-size: 0.75rem;
+      color: var(--text-muted);
+    }
+
+    .cs-occupancy-pill {
+      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+      font-size: 0.6875rem;
+      padding: 2px 8px;
+      border-radius: 4px;
+      background: #18181b;
+      margin-top: 4px;
+      display: inline-block;
+    }
+
+    /* Correctness Properties Panel */
+    .properties-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 12px;
+      margin-bottom: 20px;
+    }
+
+    @media (max-width: 800px) {
+      .properties-grid {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    .prop-card {
+      background: var(--card-bg);
+      border: 1px solid var(--card-border);
+      border-radius: 6px;
+      padding: 12px 14px;
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+
+    .prop-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .prop-title {
+      font-size: 0.75rem;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+    }
+
+    .prop-status {
+      font-size: 0.6875rem;
+      font-weight: 600;
+      color: #34d399;
+    }
+
+    .prop-desc {
+      font-size: 0.7188rem;
+      color: var(--text-muted);
+      line-height: 1.4;
     }
 
     /* Metrics & Invariants bar */
     .metrics-row {
       display: grid;
-      grid-template-columns: repeat(4, 1fr);
-      gap: 12px;
-      margin-bottom: 24px;
+      grid-template-columns: repeat(6, 1fr);
+      gap: 10px;
+      margin-bottom: 20px;
     }
 
-    @media (max-width: 700px) {
+    @media (max-width: 1000px) {
+      .metrics-row {
+        grid-template-columns: repeat(3, 1fr);
+      }
+    }
+
+    @media (max-width: 600px) {
       .metrics-row {
         grid-template-columns: 1fr 1fr;
       }
@@ -327,11 +531,11 @@
       background: var(--card-bg);
       border: 1px solid var(--card-border);
       border-radius: 6px;
-      padding: 12px 14px;
+      padding: 10px 12px;
     }
 
     .metric-title {
-      font-size: 0.6875rem;
+      font-size: 0.6563rem;
       color: var(--text-dim);
       text-transform: uppercase;
       letter-spacing: 0.05em;
@@ -342,8 +546,14 @@
       font-size: 1.25rem;
       font-weight: 600;
       color: var(--text);
-      margin-top: 4px;
+      margin-top: 3px;
       font-variant-numeric: tabular-nums;
+    }
+
+    .metric-desc {
+      font-size: 0.6563rem;
+      color: var(--text-dim);
+      margin-top: 2px;
     }
 
     /* Log section */
@@ -352,6 +562,27 @@
       border: 1px solid var(--card-border);
       border-radius: 8px;
       padding: 16px;
+    }
+
+    .log-tabs {
+      display: flex;
+      gap: 8px;
+    }
+
+    .log-tab-btn {
+      background: transparent;
+      border: 1px solid var(--border-subtle);
+      color: var(--text-muted);
+      font-size: 0.6875rem;
+      padding: 3px 10px;
+      border-radius: 4px;
+      cursor: pointer;
+    }
+
+    .log-tab-btn.active {
+      background: #27272a;
+      color: var(--text);
+      border-color: #3f3f46;
     }
 
     .log-box {
@@ -365,39 +596,110 @@
       font-size: 0.75rem;
       color: var(--text-muted);
       line-height: 1.6;
+      margin-top: 10px;
     }
 
     .log-entry {
       display: flex;
       gap: 10px;
+      align-items: flex-start;
+      border-left: 2px solid transparent;
+      padding-left: 6px;
+      margin-bottom: 3px;
     }
+
+    .log-entry.event-exec { border-left-color: #38bdf8; }
+    .log-entry.event-wait { border-left-color: #fbbf24; }
+    .log-entry.event-cs { border-left-color: #34d399; }
+    .log-entry.event-warn { border-left-color: #f87171; }
 
     .log-time {
       color: var(--text-dim);
       user-select: none;
+      flex-shrink: 0;
     }
 
-    .log-p0 { color: var(--p0-accent); }
-    .log-p1 { color: var(--p1-accent); }
-    .log-sys { color: var(--cs-accent); }
-    .log-warn { color: var(--danger); font-weight: 600; }
+    .log-tag {
+      font-size: 0.625rem;
+      padding: 1px 5px;
+      border-radius: 3px;
+      font-weight: 600;
+      text-transform: uppercase;
+      flex-shrink: 0;
+    }
+
+    .tag-exec { background: rgba(56, 189, 248, 0.15); color: #38bdf8; }
+    .tag-wait { background: rgba(251, 191, 36, 0.15); color: #fbbf24; }
+    .tag-cs { background: rgba(52, 211, 153, 0.15); color: #34d399; }
+    .tag-warn { background: rgba(248, 113, 113, 0.15); color: #f87171; }
+
+    .log-body {
+      color: var(--text);
+    }
+
+    .educational-box {
+      background: rgba(56, 189, 248, 0.05);
+      border: 1px solid rgba(56, 189, 248, 0.2);
+      border-radius: 6px;
+      padding: 10px 14px;
+      margin-bottom: 20px;
+      display: none;
+    }
+
+    .educational-box.visible {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 10px;
+    }
+
+    .stage-indicator {
+      font-size: 0.8125rem;
+      font-weight: 600;
+      color: var(--p0-accent);
+      letter-spacing: 0.02em;
+    }
+
+    .stage-desc {
+      font-size: 0.75rem;
+      color: var(--text-muted);
+    }
   </style>
 </head>
 <body>
 
   <header>
-    <h1>Peterson's Algorithm Visualizer</h1>
-    <div class="subtitle">Concurrent mutual exclusion simulation for 2 processes with shared state inspection</div>
+    <div>
+      <h1>Peterson's Solution Simulator</h1>
+      <div class="subtitle">Operating Systems Coursework: Mutual exclusion demonstration, verification & analysis</div>
+    </div>
+
+    <div class="mode-toggle-group">
+      <button id="modeLearningBtn" class="mode-btn active" onclick="setMode('learning')">Learning Mode</button>
+      <button id="modeSimBtn" class="mode-btn" onclick="setMode('simulation')">Simulation Mode</button>
+    </div>
   </header>
 
-  <!-- Top Controls -->
+  <!-- Educational Mode Banner -->
+  <div id="educationalBanner" class="educational-box visible">
+    <div>
+      <div id="stageTitle" class="stage-indicator">Stage 0 / 5 — Remainder Section</div>
+      <div id="stageDesc" class="stage-desc">Both processes are performing non-critical work. Neither process has declared intent to enter the critical section.</div>
+    </div>
+    <div style="font-size: 0.75rem; color: var(--text-dim);">
+      Step individual processes below to observe state transitions.
+    </div>
+  </div>
+
+  <!-- Top Controls Panel -->
   <div class="controls-panel">
     <button id="btnAutoPlay" class="primary" onclick="toggleAutoPlay()">Start Continuous Loop</button>
-    <button class="p0-btn" onclick="stepProcess(0)">Step P0</button>
-    <button class="p1-btn" onclick="stepProcess(1)">Step P1</button>
+    <button id="btnStepP0" class="p0-btn" onclick="stepProcess(0)">Step P0</button>
+    <button id="btnStepP1" class="p1-btn" onclick="stepProcess(1)">Step P1</button>
     <button onclick="resetSim()">Reset</button>
 
-    <span id="loopStatusBadge" class="badge badge-idle" style="padding: 6px 10px;">Loop: Inactive</span>
+    <span id="loopStatusBadge" class="badge badge-remainder" style="padding: 6px 10px;">Loop: Inactive</span>
 
     <div class="speed-control">
       <label for="speedSelect">Speed:</label>
@@ -410,13 +712,38 @@
     </div>
   </div>
 
+  <!-- Correctness Properties Panel (For Viva & Theory Exam) -->
+  <div class="properties-grid">
+    <div class="prop-card">
+      <div class="prop-header">
+        <span class="prop-title">1. Mutual Exclusion</span>
+        <span id="propMEStatus" class="prop-status">Maintained</span>
+      </div>
+      <div class="prop-desc">Both processes can never occupy the critical section simultaneously. Checked on every simulation tick.</div>
+    </div>
+    <div class="prop-card">
+      <div class="prop-header">
+        <span class="prop-title">2. Progress</span>
+        <span class="prop-status">Maintained</span>
+      </div>
+      <div class="prop-desc">If no process is in the critical section and one requests entry, it enters without hindrance from remainder threads.</div>
+    </div>
+    <div class="prop-card">
+      <div class="prop-header">
+        <span class="prop-title">3. Bounded Waiting</span>
+        <span class="prop-status">Maintained</span>
+      </div>
+      <div class="prop-desc">Because each process sets turn = other upon entry, a contending thread is guaranteed entry after at most one turn.</div>
+    </div>
+  </div>
+
   <!-- Main Execution Layout -->
   <div class="grid">
     <!-- Process 0 Panel -->
     <div class="card">
       <div class="card-header">
         <span class="card-title p0-title">Process 0 (P0)</span>
-        <span id="p0-status" class="badge badge-idle">Idle</span>
+        <span id="p0-status" class="badge badge-remainder">Remainder</span>
       </div>
 
       <div class="code-box">
@@ -446,39 +773,64 @@
         </div>
       </div>
 
+      <!-- Instruction Explanation -->
+      <div class="expl-box">
+        <div class="expl-title">
+          <span>Instruction Explanation</span>
+          <span id="p0-expl-tag" class="badge badge-remainder">Line 0</span>
+        </div>
+        <div id="p0-expl-text" class="expl-content">P0 is performing local work outside the critical section.</div>
+        <div id="p0-expl-cond" class="expl-condition" style="display: none;"></div>
+        <div class="next-action">
+          <span class="next-label">Next:</span>
+          <span id="p0-next-action">Set flag[0] = true (declare entry intent)</span>
+        </div>
+      </div>
+
       <div>
-        <button class="p0-btn" style="width: 100%; justify-content: center;" onclick="stepProcess(0)">Execute Next Step (P0)</button>
+        <button id="p0-action-btn" class="p0-btn" style="width: 100%; justify-content: center;" onclick="stepProcess(0)">Step P0: Request Entry</button>
       </div>
     </div>
 
-    <!-- Center Panel: Shared Memory & Critical Section -->
+    <!-- Center Panel: Shared Memory & Critical Section Chamber -->
     <div class="card">
       <div class="card-header">
         <span class="card-title center-title">Shared Memory</span>
-        <span class="badge badge-idle">Atomic State</span>
+        <span class="badge badge-remainder">Atomic Variables</span>
       </div>
 
       <div class="mem-grid">
-        <div class="mem-cell">
+        <div id="cell-flag0" class="mem-cell">
           <div class="mem-label">flag[0]</div>
           <div id="mem-flag0" class="mem-val val-false">false</div>
+          <div id="mem-flag0-desc" class="mem-desc">P0 idle</div>
         </div>
-        <div class="mem-cell">
+        <div id="cell-flag1" class="mem-cell">
           <div class="mem-label">flag[1]</div>
           <div id="mem-flag1" class="mem-val val-false">false</div>
+          <div id="mem-flag1-desc" class="mem-desc">P1 idle</div>
         </div>
-        <div class="mem-cell span-2">
+        <div id="cell-turn" class="mem-cell span-2">
           <div class="mem-label">turn</div>
           <div id="mem-turn" class="mem-val">0</div>
+          <div id="mem-turn-desc" class="mem-desc">Priority assigned to P0</div>
         </div>
       </div>
 
-      <div class="card-header" style="margin-top: 6px;">
-        <span class="card-title center-title">Critical Section</span>
+      <!-- Synthesis: What This Means -->
+      <div class="synthesis-card">
+        <div class="synthesis-header">What This State Means</div>
+        <div id="synthesis-text" class="synthesis-text">Neither process has requested entry. The critical section is idle and available.</div>
+      </div>
+
+      <div class="card-header" style="margin-top: 4px;">
+        <span class="card-title center-title">Critical Section Chamber</span>
       </div>
 
       <div id="cs-chamber" class="cs-chamber">
         <div id="cs-status-text" class="cs-status" style="color: var(--text-dim);">Chamber Empty</div>
+        <div id="cs-sub-text" class="cs-sub">No process inside</div>
+        <div id="cs-occupancy" class="cs-occupancy-pill">P0: REMAINDER | P1: REMAINDER</div>
       </div>
     </div>
 
@@ -486,7 +838,7 @@
     <div class="card">
       <div class="card-header">
         <span class="card-title p1-title">Process 1 (P1)</span>
-        <span id="p1-status" class="badge badge-idle">Idle</span>
+        <span id="p1-status" class="badge badge-remainder">Remainder</span>
       </div>
 
       <div class="code-box">
@@ -516,216 +868,452 @@
         </div>
       </div>
 
+      <!-- Instruction Explanation -->
+      <div class="expl-box">
+        <div class="expl-title">
+          <span>Instruction Explanation</span>
+          <span id="p1-expl-tag" class="badge badge-remainder">Line 0</span>
+        </div>
+        <div id="p1-expl-text" class="expl-content">P1 is performing local work outside the critical section.</div>
+        <div id="p1-expl-cond" class="expl-condition" style="display: none;"></div>
+        <div class="next-action">
+          <span class="next-label">Next:</span>
+          <span id="p1-next-action">Set flag[1] = true (declare entry intent)</span>
+        </div>
+      </div>
+
       <div>
-        <button class="p1-btn" style="width: 100%; justify-content: center;" onclick="stepProcess(1)">Execute Next Step (P1)</button>
+        <button id="p1-action-btn" class="p1-btn" style="width: 100%; justify-content: center;" onclick="stepProcess(1)">Step P1: Request Entry</button>
       </div>
     </div>
   </div>
 
-  <!-- Metrics -->
+  <!-- Metrics Row with Invariant Check -->
   <div class="metrics-row">
     <div class="metric-card">
       <div class="metric-title">Shared Counter</div>
       <div id="metric-counter" class="metric-val">0</div>
+      <div class="metric-desc">P0_Entries + P1_Entries</div>
     </div>
     <div class="metric-card">
       <div class="metric-title">P0 CS Entries</div>
       <div id="metric-p0-entries" class="metric-val">0</div>
+      <div class="metric-desc">Successful entries</div>
     </div>
     <div class="metric-card">
       <div class="metric-title">P1 CS Entries</div>
       <div id="metric-p1-entries" class="metric-val">0</div>
+      <div class="metric-desc">Successful entries</div>
     </div>
     <div class="metric-card">
-      <div class="metric-title">Mutual Exclusion Violations</div>
+      <div class="metric-title">Context Switches</div>
+      <div id="metric-switches" class="metric-val">0</div>
+      <div class="metric-desc">Worker transitions</div>
+    </div>
+    <div class="metric-card">
+      <div class="metric-title">Waiting Steps</div>
+      <div id="metric-waiting" class="metric-val">0</div>
+      <div class="metric-desc">Busy-wait iterations</div>
+    </div>
+    <div class="metric-card">
+      <div class="metric-title">ME Violations</div>
       <div id="metric-violations" class="metric-val" style="color: #34d399;">0</div>
+      <div class="metric-desc">Strictly zero</div>
     </div>
   </div>
 
-  <!-- Event Log -->
+  <!-- Event Log with Mode Selector -->
   <div class="log-card">
     <div class="card-header">
-      <span class="card-title center-title">State Transition Log</span>
+      <div style="display: flex; align-items: center; gap: 12px;">
+        <span class="card-title center-title">State Transition Log</span>
+        <div class="log-tabs">
+          <button id="tabEduLog" class="log-tab-btn active" onclick="setLogView('educational')">Educational Log</button>
+          <button id="tabTechLog" class="log-tab-btn" onclick="setLogView('technical')">Technical Log</button>
+        </div>
+      </div>
       <button style="padding: 2px 8px; font-size: 0.6875rem;" onclick="clearLog()">Clear Log</button>
     </div>
     <div id="log-box" class="log-box"></div>
   </div>
 
   <script>
-    /* Peterson's Algorithm State */
+    /* Peterson's Algorithm Simulator State */
     const state = {
       flag: [false, false],
       turn: 0,
-      pc: [0, 0], // Program counter: 0..5
+      pc: [0, 0], // Program Counter (0..5)
+      lastActivePid: null,
       sharedCounter: 0,
       entries: [0, 0],
+      contextSwitches: 0,
+      waitingSteps: 0,
       violations: 0,
       autoPlayTimer: null,
-      speedMs: 600
+      speedMs: 600,
+      uiMode: 'learning', // 'learning' or 'simulation'
+      logMode: 'educational' // 'educational' or 'technical'
     };
 
-    const descriptions = [
-      "Remainder Section (Idle)",
-      "Set flag = true (Intent to enter)",
-      "Yield turn to rival process",
-      "Evaluate while(flag[rival] && turn == rival)",
-      "Critical Section (Exclusively executing)",
-      "Set flag = false (Leaving CS)"
+    let nextPid = 0;
+
+    const stages = [
+      { name: "Remainder Section", desc: "Process is performing local computation outside the critical section." },
+      { name: "Entry Section: Intent", desc: "Setting flag[i] = true to announce intent to enter the critical section to the rival process." },
+      { name: "Entry Section: Priority Yield", desc: "Setting turn = rival to yield immediate entry priority to the other process." },
+      { name: "Entry Section: Busy Wait", desc: "Evaluating while (flag[rival] && turn == rival). If true, process must wait; if false, it enters." },
+      { name: "Critical Section", desc: "Executing protected shared memory operations with exclusive access." },
+      { name: "Exit Section", desc: "Setting flag[i] = false to release the critical section and notify the waiting rival." }
     ];
 
-    function log(msg, type = "sys") {
+    function setMode(mode) {
+      state.uiMode = mode;
+      document.getElementById("modeLearningBtn").className = `mode-btn ${mode === 'learning' ? 'active' : ''}`;
+      document.getElementById("modeSimBtn").className = `mode-btn ${mode === 'simulation' ? 'active' : ''}`;
+      document.getElementById("educationalBanner").className = `educational-box ${mode === 'learning' ? 'visible' : ''}`;
+      updateUI();
+    }
+
+    function setLogView(mode) {
+      state.logMode = mode;
+      document.getElementById("tabEduLog").className = `log-tab-btn ${mode === 'educational' ? 'active' : ''}`;
+      document.getElementById("tabTechLog").className = `log-tab-btn ${mode === 'technical' ? 'active' : ''}`;
+    }
+
+    function log(eduMsg, techMsg, category = "exec") {
       const box = document.getElementById("log-box");
       const entry = document.createElement("div");
-      entry.className = "log-entry";
+      entry.className = `log-entry event-${category}`;
 
       const time = new Date().toISOString().substring(11, 19);
-      let typeClass = "log-sys";
-      if (type === "p0") typeClass = "log-p0";
-      else if (type === "p1") typeClass = "log-p1";
-      else if (type === "warn") typeClass = "log-warn";
+      let tagText = "EXEC";
+      let tagClass = "tag-exec";
 
-      entry.innerHTML = `<span class="log-time">[${time}]</span> <span class="${typeClass}">${msg}</span>`;
+      if (category === "wait") { tagText = "WAIT"; tagClass = "tag-wait"; }
+      else if (category === "cs") { tagText = "CRIT"; tagClass = "tag-cs"; }
+      else if (category === "warn") { tagText = "WARN"; tagClass = "tag-warn"; }
+
+      const msg = state.logMode === 'educational' ? eduMsg : techMsg;
+
+      entry.innerHTML = `
+        <span class="log-time">[${time}]</span>
+        <span class="log-tag ${tagClass}">${tagText}</span>
+        <span class="log-body">${msg}</span>
+      `;
+
       box.appendChild(entry);
 
-      // Keep max 60 items so infinite loop does not bloat memory
-      while (box.children.length > 60) {
+      // Ring buffer to prevent DOM bloat during long continuous runs
+      while (box.children.length > 70) {
         box.removeChild(box.firstChild);
       }
 
       box.scrollTop = box.scrollHeight;
     }
 
+    function flashCell(id) {
+      const el = document.getElementById(id);
+      if (el) {
+        el.classList.add("flash");
+        setTimeout(() => el.classList.remove("flash"), 300);
+      }
+    }
+
+    function getProcessStateName(pid) {
+      const pc = state.pc[pid];
+      if (pc === 0) return { label: "Remainder", cls: "badge-remainder" };
+      if (pc === 1 || pc === 2) return { label: "Entry Protocol", cls: "badge-waiting" };
+      if (pc === 3) {
+        const rival = 1 - pid;
+        const blocked = state.flag[rival] && state.turn === rival;
+        return blocked ? { label: "Waiting / Blocked", cls: "badge-blocked" } : { label: "Permitted", cls: "badge-waiting" };
+      }
+      if (pc === 4) return { label: "In Critical Section", cls: "badge-cs" };
+      if (pc === 5) return { label: "Exit Section", cls: "badge-exit" };
+      return { label: "Unknown", cls: "badge-remainder" };
+    }
+
+    function updateProcessExplanation(pid) {
+      const rival = 1 - pid;
+      const pc = state.pc[pid];
+      const pName = `P${pid}`;
+      const rName = `P${rival}`;
+
+      const explText = document.getElementById(`${pName.toLowerCase()}-expl-text`);
+      const explTag = document.getElementById(`${pName.toLowerCase()}-expl-tag`);
+      const explCond = document.getElementById(`${pName.toLowerCase()}-expl-cond`);
+      const nextAction = document.getElementById(`${pName.toLowerCase()}-next-action`);
+      const actionBtn = document.getElementById(`${pName.toLowerCase()}-action-btn`);
+
+      explTag.textContent = `Stage ${pc}: ${stages[pc].name}`;
+
+      switch (pc) {
+        case 0:
+          explText.textContent = `${pName} is doing independent work in its remainder section. Shared resources are untouched.`;
+          explCond.style.display = "none";
+          nextAction.textContent = `Set flag[${pid}] = true (announce intent to enter)`;
+          actionBtn.textContent = `Step ${pName}: Declare Intent (flag[${pid}]=true)`;
+          break;
+
+        case 1:
+          explText.textContent = `${pName} has set flag[${pid}] = true. It now declares that it wants to enter the critical section.`;
+          explCond.style.display = "none";
+          nextAction.textContent = `Set turn = ${rival} (yield priority to ${rName})`;
+          actionBtn.textContent = `Step ${pName}: Yield Priority (turn=${rival})`;
+          break;
+
+        case 2:
+          explText.textContent = `${pName} set turn = ${rival}. It politely gives ${rName} priority if ${rName} is also requesting entry.`;
+          explCond.style.display = "none";
+          nextAction.textContent = `Evaluate while(flag[${rival}] && turn == ${rival})`;
+          actionBtn.textContent = `Step ${pName}: Check While Condition`;
+          break;
+
+        case 3:
+          const f_other = state.flag[rival];
+          const t_other = (state.turn === rival);
+          const isBlocked = f_other && t_other;
+
+          explCond.style.display = "block";
+          explCond.innerHTML = `Condition: (flag[${rival}] == ${f_other}) && (turn == ${rival} -> ${t_other})<br>` +
+            (isBlocked ?
+              `<span style="color: #f87171; font-weight: 600;">Result: TRUE -> ${pName} MUST WAIT (${rName} has priority)</span>` :
+              `<span style="color: #34d399; font-weight: 600;">Result: FALSE -> ${pName} can enter Critical Section!</span>`);
+
+          if (isBlocked) {
+            explText.textContent = `${pName} is waiting because ${rName} also requested entry (flag[${rival}]=true) and has priority (turn=${rival}).`;
+            nextAction.textContent = `Busy-wait loop check (blocked until ${rName} exits or yields)`;
+            actionBtn.textContent = `Step ${pName}: Poll While Condition (Blocked)`;
+          } else {
+            explText.textContent = `${pName} is permitted to enter because ${!f_other ? `${rName} is not requesting entry (flag[${rival}]=false)` : `priority belongs to ${pName} (turn=${state.turn})`}.`;
+            nextAction.textContent = `Enter Critical Section`;
+            actionBtn.textContent = `Step ${pName}: Enter Critical Section`;
+          }
+          break;
+
+        case 4:
+          explText.textContent = `${pName} is executing exclusively inside the critical section. Shared counter incremented.`;
+          explCond.style.display = "none";
+          nextAction.textContent = `Set flag[${pid}] = false (release lock & exit)`;
+          actionBtn.textContent = `Step ${pName}: Exit Critical Section (flag[${pid}]=false)`;
+          break;
+
+        case 5:
+          explText.textContent = `${pName} is in its exit section. Releasing flag[${pid}] = false unblocks any waiting rival process.`;
+          explCond.style.display = "none";
+          nextAction.textContent = `Return to Remainder Section`;
+          actionBtn.textContent = `Step ${pName}: Return to Remainder`;
+          break;
+      }
+    }
+
+    function updateSynthesis() {
+      const syn = document.getElementById("synthesis-text");
+      const f0 = state.flag[0];
+      const f1 = state.flag[1];
+      const turn = state.turn;
+
+      if (f0 && f1) {
+        syn.innerHTML = `<strong>Contention detected:</strong> Both P0 and P1 want entry. <strong>P${turn}</strong> has priority because <code>turn = ${turn}</code>. P${1 - turn} must busy-wait until P${turn} finishes.`;
+      } else if (f0 && !f1) {
+        syn.innerHTML = `<strong>No contention:</strong> Only P0 wants entry (<code>flag[0]=true</code>). P0 enters directly without waiting because P1 is in its remainder section.`;
+      } else if (!f0 && f1) {
+        syn.innerHTML = `<strong>No contention:</strong> Only P1 wants entry (<code>flag[1]=true</code>). P1 enters directly without waiting because P0 is in its remainder section.`;
+      } else {
+        syn.innerHTML = `Neither process is requesting entry (<code>flag[0]=false</code>, <code>flag[1]=false</code>). Critical section is idle.`;
+      }
+    }
+
     function updateUI() {
-      // Shared Memory UI
+      // Shared Memory variables
       const f0El = document.getElementById("mem-flag0");
       f0El.textContent = state.flag[0] ? "true" : "false";
       f0El.className = "mem-val " + (state.flag[0] ? "val-true" : "val-false");
+      document.getElementById("mem-flag0-desc").textContent = state.flag[0] ? "P0 wants entry" : "P0 idle / remainder";
 
       const f1El = document.getElementById("mem-flag1");
       f1El.textContent = state.flag[1] ? "true" : "false";
       f1El.className = "mem-val " + (state.flag[1] ? "val-true" : "val-false");
+      document.getElementById("mem-flag1-desc").textContent = state.flag[1] ? "P1 wants entry" : "P1 idle / remainder";
 
-      document.getElementById("mem-turn").textContent = state.turn;
+      const turnEl = document.getElementById("mem-turn");
+      turnEl.textContent = state.turn;
+      document.getElementById("mem-turn-desc").textContent = `Priority assigned to P${state.turn}`;
 
-      // Update Code Line Highlights
+      // Update Process Panels
       [0, 1].forEach(pid => {
         const prefix = pid === 0 ? "p0" : "p1";
+
+        // Highlight active line
         for (let i = 0; i <= 5; i++) {
           const line = document.getElementById(`${prefix}-line-${i}`);
           line.className = `code-line ${state.pc[pid] === i ? `active ${prefix}-active` : ""}`;
         }
 
+        // Process status badge
+        const pState = getProcessStateName(pid);
         const badge = document.getElementById(`${prefix}-status`);
-        if (state.pc[pid] === 0) {
-          badge.textContent = "Idle";
-          badge.className = "badge badge-idle";
-        } else if (state.pc[pid] === 3) {
-          const rival = 1 - pid;
-          const blocked = state.flag[rival] && state.turn === rival;
-          badge.textContent = blocked ? "Blocked" : "Entering";
-          badge.className = `badge ${blocked ? "badge-blocked" : "badge-waiting"}`;
-        } else if (state.pc[pid] === 4) {
-          badge.textContent = "In CS";
-          badge.className = "badge badge-cs";
-        } else {
-          badge.textContent = "Entry Protocol";
-          badge.className = "badge badge-waiting";
-        }
+        badge.textContent = pState.label;
+        badge.className = `badge ${pState.cls}`;
+
+        // Update instruction explanations
+        updateProcessExplanation(pid);
       });
 
-      // Critical Section Chamber
+      // Update Shared Memory Synthesis
+      updateSynthesis();
+
+      // Critical Section Chamber & Mutual Exclusion Verification
       const inCS_P0 = state.pc[0] === 4;
       const inCS_P1 = state.pc[1] === 4;
       const chamber = document.getElementById("cs-chamber");
       const csText = document.getElementById("cs-status-text");
+      const csSub = document.getElementById("cs-sub-text");
+      const csOccupancy = document.getElementById("cs-occupancy");
+
+      const p0StateDesc = getProcessStateName(0).label.toUpperCase();
+      const p1StateDesc = getProcessStateName(1).label.toUpperCase();
+      csOccupancy.textContent = `P0: ${p0StateDesc} | P1: ${p1StateDesc}`;
 
       if (inCS_P0 && inCS_P1) {
+        // Violation branch (theoretically unreachable under Peterson's algorithm)
         chamber.className = "cs-chamber violation";
-        csText.textContent = "VIOLATION! Both threads in CS";
+        csText.textContent = "VIOLATION! BOTH IN CS";
         csText.style.color = "var(--danger)";
+        csSub.textContent = "Mutual exclusion failure detected!";
         state.violations++;
         document.getElementById("metric-violations").textContent = state.violations;
         document.getElementById("metric-violations").style.color = "var(--danger)";
-        log("CRITICAL VIOLATION: Mutual exclusion breached!", "warn");
+        document.getElementById("propMEStatus").textContent = "VIOLATED";
+        document.getElementById("propMEStatus").style.color = "var(--danger)";
+        log("CRITICAL VIOLATION: Both threads entered Critical Section simultaneously!", "ME VIOLATION: active_in_cs == 2", "warn");
       } else if (inCS_P0) {
         chamber.className = "cs-chamber occupied-p0";
-        csText.textContent = "Occupied by Process 0";
+        csText.textContent = "P0 INSIDE";
         csText.style.color = "var(--p0-accent)";
+        csSub.textContent = "Exclusive access granted (P1 locked out)";
       } else if (inCS_P1) {
         chamber.className = "cs-chamber occupied-p1";
-        csText.textContent = "Occupied by Process 1";
+        csText.textContent = "P1 INSIDE";
         csText.style.color = "var(--p1-accent)";
+        csSub.textContent = "Exclusive access granted (P0 locked out)";
       } else {
         chamber.className = "cs-chamber";
-        csText.textContent = "Chamber Empty";
+        csText.textContent = "CHAMBER EMPTY";
         csText.style.color = "var(--text-dim)";
+        csSub.textContent = "Critical section idle (available)";
       }
 
-      // Metrics
+      // Educational Stage Banner Update
+      if (state.uiMode === 'learning') {
+        const activePC = Math.max(state.pc[0], state.pc[1]);
+        const activePID = state.pc[0] >= state.pc[1] ? 0 : 1;
+        document.getElementById("stageTitle").textContent = `Stage ${activePC} / 5 — ${stages[activePC].name} (P${activePID})`;
+        document.getElementById("stageDesc").textContent = stages[activePC].desc;
+      }
+
+      // Metrics & Verification Invariant: Counter == Entries[0] + Entries[1]
       document.getElementById("metric-counter").textContent = state.sharedCounter;
       document.getElementById("metric-p0-entries").textContent = state.entries[0];
       document.getElementById("metric-p1-entries").textContent = state.entries[1];
+      document.getElementById("metric-switches").textContent = state.contextSwitches;
+      document.getElementById("metric-waiting").textContent = state.waitingSteps;
     }
 
     function stepProcess(pid) {
       const rival = 1 - pid;
       const currentPC = state.pc[pid];
       const pName = `P${pid}`;
-      const logType = pid === 0 ? "p0" : "p1";
+      const rName = `P${rival}`;
+
+      if (state.lastActivePid !== null && state.lastActivePid !== pid) {
+        state.contextSwitches++;
+      }
+      state.lastActivePid = pid;
 
       switch (currentPC) {
         case 0:
           // Move from Remainder to Step 1
           state.pc[pid] = 1;
-          log(`${pName}: Leaving remainder section -> requesting CS entry`, logType);
+          log(
+            `${pName} is leaving remainder section -> preparing to enter critical section.`,
+            `${pName}: pc=0 -> pc=1`,
+            "exec"
+          );
           break;
 
         case 1:
           // flag[pid] = true;
           state.flag[pid] = true;
+          flashCell(`cell-flag${pid}`);
           state.pc[pid] = 2;
-          log(`${pName}: Set flag[${pid}] = true`, logType);
+          log(
+            `${pName} set flag[${pid}] = true (declares intent to enter).`,
+            `atomic_store(&flag[${pid}], true)`,
+            "exec"
+          );
           break;
 
         case 2:
           // turn = rival;
           state.turn = rival;
+          flashCell("cell-turn");
           state.pc[pid] = 3;
-          log(`${pName}: Set turn = ${rival} (yields priority)`, logType);
+          log(
+            `${pName} set turn = ${rival} (yields priority to ${rName} to prevent deadlock).`,
+            `atomic_store(&turn, ${rival})`,
+            "exec"
+          );
           break;
 
         case 3:
           // while (flag[rival] && turn == rival);
           const isBlocked = state.flag[rival] && state.turn === rival;
           if (isBlocked) {
-            log(`${pName}: Busy-waiting (blocked: flag[${rival}]=true and turn=${rival})`, logType);
-            // Stays on line 3
+            state.waitingSteps++;
+            log(
+              `${pName} evaluated while condition -> BLOCKED (flag[${rival}]=true and turn=${rival}). ${pName} must wait for ${rName}.`,
+              `${pName}: busy-wait loop evaluated true -> spin`,
+              "wait"
+            );
+            // Stays on pc = 3
           } else {
             state.pc[pid] = 4;
             state.entries[pid]++;
             state.sharedCounter++;
-            log(`${pName}: Condition clear -> Entering Critical Section (Counter=${state.sharedCounter})`, logType);
+            log(
+              `${pName} evaluated while condition -> FALSE. Permitted to enter Critical Section! (Counter=${state.sharedCounter})`,
+              `${pName}: lock_peterson() acquired -> pc=4; counter++`,
+              "cs"
+            );
           }
           break;
 
         case 4:
           // In Critical section -> Move to exit section
           state.pc[pid] = 5;
-          log(`${pName}: Finished critical work -> entering exit section`, logType);
+          log(
+            `${pName} completed critical section operations -> entering exit section.`,
+            `${pName}: exiting critical section -> pc=5`,
+            "exec"
+          );
           break;
 
         case 5:
           // flag[pid] = false;
           state.flag[pid] = false;
+          flashCell(`cell-flag${pid}`);
           state.pc[pid] = 0;
-          log(`${pName}: Set flag[${pid}] = false -> returned to remainder section`, logType);
+          log(
+            `${pName} set flag[${pid}] = false (released lock). Returned to remainder section.`,
+            `atomic_store(&flag[${pid}], false) -> pc=0`,
+            "exec"
+          );
           break;
       }
 
       updateUI();
     }
-
-    let nextPid = 0;
 
     function toggleAutoPlay() {
       const btn = document.getElementById("btnAutoPlay");
@@ -737,21 +1325,21 @@
         btn.textContent = "Start Continuous Loop";
         btn.className = "primary";
         badge.textContent = "Loop: Paused";
-        badge.className = "badge badge-idle";
-        log("Continuous animation stopped by user", "sys");
+        badge.className = "badge badge-remainder";
+        log("Continuous simulation paused by user.", "auto_play: stopped", "exec");
       } else {
         btn.textContent = "Stop / Pause Loop";
         btn.className = "";
         badge.textContent = "Loop: Running Continuously";
         badge.className = "badge badge-cs";
-        log("Continuous loop started - runs indefinitely until stopped", "sys");
+        log("Continuous simulation started (runs indefinitely until paused).", "auto_play: started", "exec");
 
         state.autoPlayTimer = setInterval(() => {
-          // Fair interleave: alternate with occasional contention bursts
+          // Cooperative interleaved scheduler
           const pid = nextPid;
           nextPid = 1 - nextPid;
 
-          // If current candidate is blocked on while loop, step other to unblock
+          // If current candidate is busy-waiting, step rival to advance state
           const rival = 1 - pid;
           const isBlocked = (state.pc[pid] === 3 && state.flag[rival] && state.turn === rival);
           stepProcess(isBlocked ? rival : pid);
@@ -772,23 +1360,35 @@
       state.flag = [false, false];
       state.turn = 0;
       state.pc = [0, 0];
+      state.lastActivePid = null;
       state.sharedCounter = 0;
       state.entries = [0, 0];
+      state.contextSwitches = 0;
+      state.waitingSteps = 0;
       state.violations = 0;
+
       const badge = document.getElementById("loopStatusBadge");
       badge.textContent = "Loop: Inactive";
-      badge.className = "badge badge-idle";
+      badge.className = "badge badge-remainder";
+
+      document.getElementById("propMEStatus").textContent = "Maintained";
+      document.getElementById("propMEStatus").style.color = "#34d399";
+
       updateUI();
-      log("Simulation reset to initial state", "sys");
+      log("Simulation reset to initial state.", "state: reset(all)", "exec");
     }
 
     function clearLog() {
       document.getElementById("log-box").innerHTML = "";
     }
 
-    // Init
+    // Initialize Simulator
     updateUI();
-    log("Peterson's Algorithm simulator initialized. Ready to step.", "sys");
+    log(
+      "Peterson's Solution simulator initialized. Select Learning Mode or Simulation Mode to begin.",
+      "init: state initialized",
+      "exec"
+    );
   </script>
 </body>
 </html>
