@@ -392,17 +392,20 @@
 
   <!-- Top Controls -->
   <div class="controls-panel">
-    <button id="btnAutoPlay" class="primary" onclick="toggleAutoPlay()">Auto Play</button>
+    <button id="btnAutoPlay" class="primary" onclick="toggleAutoPlay()">Start Continuous Loop</button>
     <button class="p0-btn" onclick="stepProcess(0)">Step P0</button>
     <button class="p1-btn" onclick="stepProcess(1)">Step P1</button>
     <button onclick="resetSim()">Reset</button>
 
+    <span id="loopStatusBadge" class="badge badge-idle" style="padding: 6px 10px;">Loop: Inactive</span>
+
     <div class="speed-control">
-      <label for="speedSelect">Simulation Speed:</label>
+      <label for="speedSelect">Speed:</label>
       <select id="speedSelect" onchange="updateSpeed()">
         <option value="1200">Slow (1.2s)</option>
         <option value="600" selected>Normal (600ms)</option>
         <option value="250">Fast (250ms)</option>
+        <option value="100">Turbo (100ms)</option>
       </select>
     </div>
   </div>
@@ -583,6 +586,12 @@
 
       entry.innerHTML = `<span class="log-time">[${time}]</span> <span class="${typeClass}">${msg}</span>`;
       box.appendChild(entry);
+
+      // Keep max 60 items so infinite loop does not bloat memory
+      while (box.children.length > 60) {
+        box.removeChild(box.firstChild);
+      }
+
       box.scrollTop = box.scrollHeight;
     }
 
@@ -716,22 +725,36 @@
       updateUI();
     }
 
+    let nextPid = 0;
+
     function toggleAutoPlay() {
       const btn = document.getElementById("btnAutoPlay");
+      const badge = document.getElementById("loopStatusBadge");
+
       if (state.autoPlayTimer) {
         clearInterval(state.autoPlayTimer);
         state.autoPlayTimer = null;
-        btn.textContent = "Auto Play";
+        btn.textContent = "Start Continuous Loop";
         btn.className = "primary";
-        log("Auto simulation paused", "sys");
+        badge.textContent = "Loop: Paused";
+        badge.className = "badge badge-idle";
+        log("Continuous animation stopped by user", "sys");
       } else {
-        btn.textContent = "Pause";
+        btn.textContent = "Stop / Pause Loop";
         btn.className = "";
-        log("Auto simulation started", "sys");
+        badge.textContent = "Loop: Running Continuously";
+        badge.className = "badge badge-cs";
+        log("Continuous loop started - runs indefinitely until stopped", "sys");
+
         state.autoPlayTimer = setInterval(() => {
-          // Choose randomly or alternate processes
-          const pid = Math.random() < 0.5 ? 0 : 1;
-          stepProcess(pid);
+          // Fair interleave: alternate with occasional contention bursts
+          const pid = nextPid;
+          nextPid = 1 - nextPid;
+
+          // If current candidate is blocked on while loop, step other to unblock
+          const rival = 1 - pid;
+          const isBlocked = (state.pc[pid] === 3 && state.flag[rival] && state.turn === rival);
+          stepProcess(isBlocked ? rival : pid);
         }, state.speedMs);
       }
     }
@@ -752,6 +775,9 @@
       state.sharedCounter = 0;
       state.entries = [0, 0];
       state.violations = 0;
+      const badge = document.getElementById("loopStatusBadge");
+      badge.textContent = "Loop: Inactive";
+      badge.className = "badge badge-idle";
       updateUI();
       log("Simulation reset to initial state", "sys");
     }
